@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de Cracha — QR Code</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:;">
+  <style>
+    :root {
+      --bg:            #f1f5f9;
+      --surface:       #ffffff;
+      --border:        #e2e8f0;
+      --text:          #0f172a;
+      --muted:         #64748b;
+      --primary:       #4f46e5;
+      --primary-dark:  #4338ca;
+      --danger:        #ef4444;
+      --danger-light:  #fef2f2;
+      --danger-border: #fecaca;
+      --radius:        12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ─────────────────────────────── */
+    header {
+      background: #0f172a;
+      height: 58px;
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .header-badge {
+      width: 30px; height: 30px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    header h1 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #f8fafc;
+      letter-spacing: 0.2px;
+    }
+
+    .sep { color: #334155; }
+    .sub { font-size: 0.82rem; color: #64748b; }
+
+    /* ── LAYOUT ──────────────────────────────── */
+    main {
+      flex: 1;
+      max-width: 1080px;
+      width: 100%;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* ── CARD ────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border-radius: 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 20px rgba(0,0,0,0.07);
+    }
+
+    .card-head {
+      padding: 1.375rem 1.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-head h2 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+    }
+
+    .card-body { padding: 1.625rem 1.75rem; }
+
+    /* ── CAMPOS ──────────────────────────────── */
+    .campo { margin-bottom: 1.125rem; }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--muted);
+      margin-bottom: 0.45rem;
+    }
+
+    .req { color: var(--danger); }
+
+    .input-base {
+      width: 100%;
+      padding: 0.675rem 0.9rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.93rem;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+
+    .input-base::placeholder { color: #94a3b8; }
+
+    .input-base:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+    }
+
+    .input-base.invalido {
+      border-color: var(--danger);
+      background: var(--danger-light);
+    }
+
+    /* ── REDES SOCIAIS ───────────────────────── */
+    .secao-social { margin-bottom: 1.125rem; }
+    .secao-social > label { margin-bottom: 0.625rem; }
+
+    .social-botoes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .social-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.55rem 0.875rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      transition: all 0.18s;
+      user-select: none;
+      line-height: 1;
+    }
+
+    .social-btn svg { width: 15px; height: 15px; flex-shrink: 0; fill: currentColor; }
+
+    .social-btn:hover:not(.ativo) {
+      border-color: #94a3b8;
+      color: var(--text);
+      background: #f8fafc;
+    }
+
+    .social-btn[data-rede="linkedin"].ativo  { background: #0077b5; border-color: #0077b5; color: #fff; }
+    .social-btn[data-rede="twitter"].ativo   { background: #000;    border-color: #000;    color: #fff; }
+    .social-btn[data-rede="instagram"].ativo {
+      background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+      border-color: transparent;
+      color: #fff;
+    }
+    .social-btn[data-rede="github"].ativo    { background: #24292f; border-color: #24292f; color: #fff; }
+
+    /* slots animados */
+    .social-slot {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.3s cubic-bezier(.4,0,.2,1), opacity 0.22s ease, margin-top 0.3s ease;
+    }
+
+    .social-slot.visivel {
+      max-height: 60px;
+      opacity: 1;
+      margin-top: 0.7rem;
+    }
+
+    .social-input-row {
+      display: flex;
+      align-items: stretch;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+
+    .social-input-row:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+    }
+
+    .social-icone {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      flex-shrink: 0;
+      border-right: 1.5px solid var(--border);
+    }
+
+    .social-icone svg { width: 15px; height: 15px; fill: white; }
+
+    .social-icone.li  { background: #0077b5; }
+    .social-icone.tw  { background: #000; }
+    .social-icone.ig  { background: linear-gradient(160deg, #f09433, #dc2743, #bc1888); }
+    .social-icone.gh  { background: #24292f; }
+
+    .social-input-row input {
+      flex: 1;
+      padding: 0.675rem 0.9rem;
+      border: none;
+      outline: none;
+      font-size: 0.88rem;
+      color: var(--text);
+      background: transparent;
+    }
+
+    .social-input-row input::placeholder { color: #94a3b8; }
+
+    /* ── ALERTA ──────────────────────────────── */
+    .alerta {
+      display: none;
+      align-items: flex-start;
+      gap: 0.55rem;
+      padding: 0.8rem 0.9rem;
+      background: var(--danger-light);
+      border: 1px solid var(--danger-border);
+      border-radius: var(--radius);
+      color: #b91c1c;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin-bottom: 1.125rem;
+    }
+
+    .alerta.visivel { display: flex; }
+    .alerta svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 2px; stroke: currentColor; fill: none; }
+
+    /* ── ACOES ───────────────────────────────── */
+    .divisor { height: 1px; background: var(--border); margin: 1.5rem -1.75rem; }
+
+    .acoes { display: flex; gap: 0.625rem; }
+
+    .btn {
+      padding: 0.675rem 1.125rem;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      line-height: 1;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-ghost { background: var(--bg); color: var(--muted); }
+    .btn-ghost:hover { background: #e2e8f0; color: var(--text); }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary svg { width: 14px; height: 14px; stroke: currentColor; fill: none; }
+
+    /* ── PAINEL DIREITO ──────────────────────── */
+    .painel-direito {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .vazio {
+      width: 100%;
+      min-height: 280px;
+      border: 2px dashed #cbd5e1;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding: 2rem;
+    }
+
+    .vazio-icone { width: 52px; height: 52px; color: #cbd5e1; }
+
+    .vazio p {
+      font-size: 0.875rem;
+      color: #94a3b8;
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    .vazio p strong { color: #64748b; font-weight: 600; }
+
+    /* ── CRACHA ──────────────────────────────── */
+    @keyframes surgir {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .cracha-wrap {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+      width: 100%;
+    }
+
+    .cracha-wrap.visivel {
+      display: flex;
+      animation: surgir 0.3s ease;
+    }
+
+    .cracha {
+      width: 100%;
+      max-width: 460px;
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.04),
+        0 8px 24px rgba(0,0,0,0.11),
+        0 2px 6px rgba(0,0,0,0.07);
+    }
+
+    .cracha-topo {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      padding: 1.375rem 1.75rem 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cracha-topo::before,
+    .cracha-topo::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+    }
+
+    .cracha-topo::before { width: 130px; height: 130px; top: -45px; right: -30px; }
+    .cracha-topo::after  { width: 90px;  height: 90px;  bottom: -50px; right: 80px; }
+
+    .cracha-evento {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 0.2rem;
+    }
+
+    .cracha-titulo {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: white;
+    }
+
+    .cracha-corpo {
+      padding: 1.625rem 1.75rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1.375rem;
+      align-items: start;
+    }
+
+    .cracha-nome {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      margin-bottom: 1rem;
+    }
+
+    .cracha-contatos { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .cracha-linha {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-size: 0.8rem;
+      color: #475569;
+    }
+
+    .c-icone {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .c-icone svg { width: 12px; height: 12px; }
+
+    .c-email { background: #f1f5f9; }
+    .c-email svg { stroke: #64748b; fill: none; }
+    .c-li  { background: #0077b5; } .c-li  svg { fill: white; }
+    .c-tw  { background: #000; }    .c-tw  svg { fill: white; }
+    .c-ig  { background: linear-gradient(135deg, #f09433, #dc2743, #bc1888); } .c-ig svg { fill: white; }
+    .c-gh   { background: #24292f; } .c-gh  svg { fill: white; }
+    .c-link { background: #0ea5e9; } .c-link svg { stroke: white; fill: none; }
+
+    /* ── LINK PERSONALIZADO ──────────────────── */
+    .campo-link { margin-top: 1rem; }
+
+    .link-input-row {
+      display: flex;
+      align-items: stretch;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+
+    .link-input-row:focus-within {
+      border-color: #0ea5e9;
+      box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
+    }
+
+    .link-prefixo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      flex-shrink: 0;
+      background: #0ea5e9;
+      border-right: 1.5px solid var(--border);
+    }
+
+    .link-prefixo svg { width: 15px; height: 15px; stroke: white; fill: none; }
+
+    .link-input-row input {
+      flex: 1;
+      padding: 0.675rem 0.9rem;
+      border: none;
+      outline: none;
+      font-size: 0.88rem;
+      color: var(--text);
+      background: transparent;
+    }
+
+    .link-input-row input::placeholder { color: #94a3b8; }
+
+    .link-hint {
+      font-size: 0.73rem;
+      color: #94a3b8;
+      margin-top: 0.35rem;
+      padding-left: 0.1rem;
+    }
+
+    /* ── CONSENTIMENTO ───────────────────────── */
+    .campo-consent { margin-top: 1rem; }
+
+    .consent-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.625rem;
+      padding: 0.875rem 1rem;
+      background: #f8fafc;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+
+    .consent-row.invalido { border-color: var(--danger); background: var(--danger-light); }
+
+    .consent-row input[type="checkbox"] {
+      width: 16px; height: 16px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      cursor: pointer;
+      accent-color: var(--primary);
+    }
+
+    .consent-texto {
+      font-size: 0.8rem;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .consent-texto a {
+      color: var(--primary);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    /* ── MODAL PRIVACIDADE ───────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-backdrop.aberto { display: flex; }
+
+    .modal {
+      background: white;
+      border-radius: 16px;
+      max-width: 540px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .modal-cabecalho {
+      padding: 1.375rem 1.75rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-cabecalho h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .modal-fechar {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1.25rem;
+      line-height: 1;
+      padding: 0.25rem;
+    }
+
+    .modal-fechar:hover { color: var(--text); }
+
+    .modal-corpo {
+      padding: 1.5rem 1.75rem;
+      font-size: 0.875rem;
+      color: #475569;
+      line-height: 1.7;
+    }
+
+    .modal-corpo h4 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 1.25rem 0 0.4rem;
+    }
+
+    .modal-corpo h4:first-child { margin-top: 0; }
+
+    .modal-rodape {
+      padding: 1rem 1.75rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* link privacidade no footer */
+    .footer-link {
+      color: #64748b;
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: 0.78rem;
+      font-family: inherit;
+    }
+
+    .footer-link:hover { color: #94a3b8; }
+
+    .cracha-qr { border: 3px solid #f1f5f9; border-radius: 12px; overflow: hidden; flex-shrink: 0; }
+    .cracha-qr img { display: block; width: 118px; height: 118px; }
+
+    .cracha-rodape {
+      padding: 0.7rem 1.75rem;
+      background: #f8fafc;
+      border-top: 1px solid var(--border);
+      font-size: 0.67rem;
+      color: #94a3b8;
+      letter-spacing: 0.4px;
+      text-align: center;
+    }
+
+    .btn-imprimir {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.75rem;
+      background: #0f172a;
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-imprimir:hover { background: #1e293b; }
+    .btn-imprimir svg { width: 15px; height: 15px; stroke: currentColor; fill: none; }
+
+    /* ── FOOTER ──────────────────────────────── */
+    footer {
+      background: #0f172a;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .footer-item {
+      font-size: 0.78rem;
+      color: #475569;
+      letter-spacing: 0.3px;
+    }
+
+    .footer-dot {
+      width: 4px; height: 4px;
+      background: #334155;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── PRINT ───────────────────────────────── */
+    @media print {
+      header, .card, .vazio, .btn-imprimir, footer { display: none !important; }
+      body { background: white; }
+      main { display: block; margin: 0; padding: 1rem; }
+      .painel-direito { display: block; }
+      .cracha-wrap { display: flex !important; justify-content: center; }
+      .cracha { max-width: 420px; box-shadow: none; border: 1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-badge">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+      <path d="M14 14h3v3h-3z M17 17h3 M14 20h3"/>
+    </svg>
+  </div>
+  <h1>Gerador de Cracha</h1>
+  <span class="sep">/</span>
+  <span class="sub">QR Code</span>
+</header>
+
+<main>
+
+  <!-- FORMULARIO -->
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Dados do Participante</h2>
+      </div>
+      <div class="card-body">
+
+        <div class="alerta" id="alerta">
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <circle cx="12" cy="16" r=".5" fill="currentColor"/>
+          </svg>
+          <span id="alerta-msg"></span>
+        </div>
+
+        <div class="campo">
+          <label for="nome">Nome Completo <span class="req">*</span></label>
+          <input class="input-base" type="text" id="nome" placeholder="Ex: Maria Silva" autocomplete="name">
+        </div>
+
+        <div class="campo">
+          <label for="email">Email <span class="req">*</span></label>
+          <input class="input-base" type="email" id="email" placeholder="Ex: maria@empresa.com" autocomplete="email">
+        </div>
+
+        <div class="secao-social">
+          <label>Redes Sociais</label>
+
+          <div class="social-botoes">
+
+            <button type="button" class="social-btn" data-rede="linkedin" onclick="toggleRede(this)">
+              <svg viewBox="0 0 24 24">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
+              LinkedIn
+            </button>
+
+            <button type="button" class="social-btn" data-rede="twitter" onclick="toggleRede(this)">
+              <svg viewBox="0 0 24 24">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              Twitter
+            </button>
+
+            <button type="button" class="social-btn" data-rede="instagram" onclick="toggleRede(this)">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+              </svg>
+              Instagram
+            </button>
+
+            <button type="button" class="social-btn" data-rede="github" onclick="toggleRede(this)">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+              </svg>
+              GitHub
+            </button>
+
+          </div>
+
+          <div class="social-slot" id="slot-linkedin">
+            <div class="social-input-row">
+              <div class="social-icone li">
+                <svg viewBox="0 0 24 24">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                </svg>
+              </div>
+              <input type="text" id="linkedin" placeholder="usuario ou linkedin.com/in/usuario">
+            </div>
+          </div>
+
+          <div class="social-slot" id="slot-twitter">
+            <div class="social-input-row">
+              <div class="social-icone tw">
+                <svg viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+              </div>
+              <input type="text" id="twitter" placeholder="@usuario ou usuario">
+            </div>
+          </div>
+
+          <div class="social-slot" id="slot-instagram">
+            <div class="social-input-row">
+              <div class="social-icone ig">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                </svg>
+              </div>
+              <input type="text" id="instagram" placeholder="@usuario ou usuario">
+            </div>
+          </div>
+
+          <div class="social-slot" id="slot-github">
+            <div class="social-input-row">
+              <div class="social-icone gh">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                </svg>
+              </div>
+              <input type="text" id="github" placeholder="usuario ou github.com/usuario">
+            </div>
+          </div>
+
+        </div>
+
+        <div class="campo-link">
+          <label for="link_personalizado">Link personalizado para o QR Code</label>
+          <div class="link-input-row">
+            <div class="link-prefixo">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+              </svg>
+            </div>
+            <input type="url" id="link_personalizado" placeholder="https://seusite.com.br ou qualquer link">
+          </div>
+          <p class="link-hint">Quando preenchido, o QR Code aponta para este link. Caso contrario, aponta para as redes sociais selecionadas.</p>
+        </div>
+
+        <div class="campo-consent">
+          <label class="consent-row" id="consent-row">
+            <input type="checkbox" id="consentimento">
+            <span class="consent-texto">
+              Concordo que meus dados (nome, email e redes sociais) sejam armazenados para fins de identificacao no evento.
+              Posso solicitar a exclusao a qualquer momento pelo email informado.
+              Leia nossa <a onclick="abrirPrivacidade(event)">Politica de Privacidade</a>.
+            </span>
+          </label>
+        </div>
+
+        <div class="divisor"></div>
+
+        <div class="acoes">
+          <button type="button" class="btn btn-ghost" onclick="cancelar()">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="criar()">
+            <svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <path d="M14 17h3m0 0h3m-3 0v-3m0 3v3"/>
+            </svg>
+            Criar Cracha
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- PAINEL DIREITO -->
+  <div class="painel-direito">
+
+    <div class="vazio" id="vazio">
+      <svg class="vazio-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+      <p>Preencha os dados e clique em<br><strong>Criar Cracha</strong> para visualizar</p>
+    </div>
+
+    <div class="cracha-wrap" id="cracha-wrap">
+      <div class="cracha">
+
+        <div class="cracha-topo">
+          <div class="cracha-evento">Encontro de Tecnologia 2026</div>
+          <div class="cracha-titulo">Credencial</div>
+        </div>
+
+        <div class="cracha-corpo">
+          <div>
+            <div class="cracha-nome" id="cracha-nome"></div>
+            <div class="cracha-contatos">
+
+              <div class="cracha-linha">
+                <div class="c-icone c-email">
+                  <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                </div>
+                <span id="cracha-email"></span>
+              </div>
+
+              <div class="cracha-linha" id="clinha-linkedin" style="display:none">
+                <div class="c-icone c-li">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                </div>
+                <span id="cracha-linkedin"></span>
+              </div>
+
+              <div class="cracha-linha" id="clinha-twitter" style="display:none">
+                <div class="c-icone c-tw">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                </div>
+                <span id="cracha-twitter"></span>
+              </div>
+
+              <div class="cracha-linha" id="clinha-instagram" style="display:none">
+                <div class="c-icone c-ig">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                  </svg>
+                </div>
+                <span id="cracha-instagram"></span>
+              </div>
+
+              <div class="cracha-linha" id="clinha-github" style="display:none">
+                <div class="c-icone c-gh">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                  </svg>
+                </div>
+                <span id="cracha-github"></span>
+              </div>
+
+              <div class="cracha-linha" id="clinha-link" style="display:none">
+                <div class="c-icone c-link">
+                  <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+                  </svg>
+                </div>
+                <span id="cracha-link" style="font-size:0.75rem;word-break:break-all"></span>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="cracha-qr">
+            <img id="cracha-qr" src="" alt="QR Code" width="118" height="118">
+          </div>
+        </div>
+
+        <div class="cracha-rodape">Escaneie o QR Code para acessar os perfis de contato</div>
+      </div>
+
+      <button type="button" class="btn-imprimir" onclick="window.print()">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        Imprimir
+      </button>
+    </div>
+
+  </div>
+
+</main>
+
+<footer>
+  <span class="footer-item">Gerador QR Code</span>
+  <div class="footer-dot"></div>
+  <span class="footer-item">Todos os direitos reservados</span>
+  <div class="footer-dot"></div>
+  <span class="footer-item">Code by G.Buck</span>
+  <div class="footer-dot"></div>
+  <button class="footer-link" onclick="abrirPrivacidade(event)">Politica de Privacidade</button>
+</footer>
+
+<!-- MODAL PRIVACIDADE -->
+<div class="modal-backdrop" id="modal-privacidade">
+  <div class="modal">
+    <div class="modal-cabecalho">
+      <h3>Politica de Privacidade</h3>
+      <button class="modal-fechar" onclick="fecharPrivacidade()">&#x2715;</button>
+    </div>
+    <div class="modal-corpo">
+      <h4>Quais dados coletamos</h4>
+      <p>Nome completo, endereco de email e, opcionalmente, perfis de redes sociais (LinkedIn, Twitter, Instagram, GitHub) e links personalizados fornecidos voluntariamente pelo participante.</p>
+
+      <h4>Para que usamos</h4>
+      <p>Exclusivamente para geracao do cracha de identificacao em eventos. Os dados sao armazenados para permitir reimpressao e controle de participantes.</p>
+
+      <h4>Base legal (LGPD art. 7, I)</h4>
+      <p>O tratamento e realizado com base no consentimento expresso do titular, conforme a Lei Geral de Protecao de Dados (Lei 13.709/2018).</p>
+
+      <h4>Seus direitos</h4>
+      <p>Voce pode solicitar acesso, correcao ou exclusao dos seus dados a qualquer momento pelo email <strong>privacidade@gbuck.dev</strong>. Os dados serao removidos em ate 15 dias uteis (LGPD art. 18).</p>
+
+      <h4>Retencao</h4>
+      <p>Os dados sao mantidos pelo periodo do evento e ate 90 dias apos seu encerramento, sendo entao excluidos permanentemente.</p>
+
+      <h4>Compartilhamento</h4>
+      <p>Os dados nao sao compartilhados com terceiros, vendidos ou utilizados para fins de marketing.</p>
+
+      <h4>Seguranca</h4>
+      <p>Os dados sao armazenados em banco de dados com conexao criptografada (TLS). O acesso e restrito ao responsavel pelo sistema.</p>
+    </div>
+    <div class="modal-rodape">
+      <button type="button" class="btn btn-primary" style="flex:none" onclick="fecharPrivacidade()">Entendi</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const REDES = ['linkedin', 'twitter', 'instagram', 'github'];
+
+  const ARROBA = { twitter: true, instagram: true };
+
+  function toggleRede(btn) {
+    const rede = btn.dataset.rede;
+    const ativo = btn.classList.toggle('ativo');
+    const slot = document.getElementById('slot-' + rede);
+    slot.classList.toggle('visivel', ativo);
+    if (ativo) slot.querySelector('input').focus();
+    else slot.querySelector('input').value = '';
+  }
+
+  function abrirPrivacidade(e) {
+    if (e) e.preventDefault();
+    el('modal-privacidade').classList.add('aberto');
+  }
+
+  function fecharPrivacidade() {
+    el('modal-privacidade').classList.remove('aberto');
+  }
+
+  el('modal-privacidade').addEventListener('click', function(e) {
+    if (e.target === this) fecharPrivacidade();
+  });
+
+  async function criar() {
+    limparErros();
+
+    if (!el('consentimento').checked) {
+      el('consent-row').classList.add('invalido');
+      mostrarErro('Voce precisa aceitar os termos para continuar.');
+      return;
+    }
+    el('consent-row').classList.remove('invalido');
+
+    const dados = {
+      nome:               el('nome').value,
+      email:              el('email').value,
+      linkedin:           el('linkedin').value,
+      twitter:            el('twitter').value,
+      instagram:          el('instagram').value,
+      github:             el('github').value,
+      link_personalizado: el('link_personalizado').value,
+      consentimento:      el('consentimento').checked,
+    };
+
+    let resp, json;
+    try {
+      resp = await fetch('/api/gerar', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(dados),
+      });
+      json = await resp.json();
+    } catch {
+      mostrarErro('Falha na comunicacao com o servidor.');
+      return;
+    }
+
+    if (!resp.ok || json.erro) {
+      mostrarErro(json.erro || 'Erro desconhecido.');
+      const msg = json.erro || '';
+      if (msg.includes('nome') || msg.includes('sobrenome')) el('nome').classList.add('invalido');
+      if (msg.includes('email')) el('email').classList.add('invalido');
+      return;
+    }
+
+    el('cracha-nome').textContent  = json.nome;
+    el('cracha-email').textContent = json.email;
+
+    exibir('clinha-linkedin',  'cracha-linkedin',  json.linkedin,  false);
+    exibir('clinha-twitter',   'cracha-twitter',   json.twitter,   true);
+    exibir('clinha-instagram', 'cracha-instagram', json.instagram, true);
+    exibir('clinha-github',    'cracha-github',    json.github,    false);
+    exibir('clinha-link',      'cracha-link',      json.link_personalizado, false);
+
+    el('cracha-qr').src = 'data:image/png;base64,' + json.qrcode;
+    el('vazio').style.display = 'none';
+    el('cracha-wrap').classList.add('visivel');
+  }
+
+  function cancelar() {
+    el('nome').value  = '';
+    el('email').value = '';
+    el('link_personalizado').value = '';
+    el('consentimento').checked = false;
+    el('consent-row').classList.remove('invalido');
+    REDES.forEach(r => {
+      el(r).value = '';
+      el('slot-' + r).classList.remove('visivel');
+      document.querySelector('[data-rede="' + r + '"]').classList.remove('ativo');
+    });
+    limparErros();
+    el('cracha-wrap').classList.remove('visivel');
+    el('vazio').style.display = '';
+  }
+
+  function exibir(idLinha, idSpan, usuario, comArroba) {
+    const linha = el(idLinha);
+    if (usuario) {
+      el(idSpan).textContent = comArroba ? '@' + usuario : usuario;
+      linha.style.display = 'flex';
+    } else {
+      linha.style.display = 'none';
+    }
+  }
+
+  function mostrarErro(msg) {
+    el('alerta-msg').textContent = msg;
+    el('alerta').classList.add('visivel');
+  }
+
+  function limparErros() {
+    el('alerta').classList.remove('visivel');
+    el('nome').classList.remove('invalido');
+    el('email').classList.remove('invalido');
+  }
+
+  function el(id) { return document.getElementById(id); }
+</script>
+
+</body>
+</html>

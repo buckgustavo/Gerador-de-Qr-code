@@ -1,0 +1,62 @@
+# ── BINARIOS ─────────────────────────────────────────────
+gerador-qrcode
+gerador-qrcode.exe
+main
+main.exe
+/bin/
+/dist/
+
+# ── MODULOS GO ───────────────────────────────────────────
+vendor/
+
+# ── CREDENCIAIS E SEGREDOS (LGPD art. 46) ────────────────
+# Nunca versionar conexoes de banco, chaves ou tokens
+.env
+.env.local
+.env.production
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.cert
+*.crt
+secrets.*
+config.local.*
+
+# ── DADOS PESSOAIS EXPORTADOS (LGPD art. 6) ──────────────
+# Dumps e exportacoes podem conter dados de titulares
+exports/
+dumps/
+backups/
+*.sql.gz
+*.dump
+*.bak
+
+# ── LOGS (podem conter nome, email, IP) ──────────────────
+*.log
+logs/
+tmp/
+
+# ── IDE ──────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*.suo
+.history/
+
+# ── SISTEMA OPERACIONAL ───────────────────────────────────
+.DS_Store
+.DS_Store?
+Thumbs.db
+desktop.ini
+
+# ── CERTIFICADOS TLS ─────────────────────────────────────
+certs/
+
+# ── FERRAMENTAS DE DESENVOLVIMENTO ───────────────────────
+.claude/
+.agents/
+skills-lock.json
